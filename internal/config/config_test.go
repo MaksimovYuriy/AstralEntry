@@ -17,7 +17,7 @@ func TestLoadFromDotEnv(t *testing.T) {
 	t.Setenv("HTTP_PORT", "39091")
 	t.Setenv("DB_NAME", "before_dotenv_database")
 
-	dotEnv := []byte("APP_ENV=dotenv\nHTTP_PORT=19091\nDB_NAME=dotenv_database\n")
+	dotEnv := []byte("APP_ENV=dotenv\nHTTP_PORT=19091\nDB_NAME=dotenv_database\nAUTH_ADMIN_TOKEN=admin\n")
 	if err := os.WriteFile(".env", dotEnv, 0o600); err != nil {
 		t.Fatalf("write .env: %v", err)
 	}
@@ -49,6 +49,7 @@ func TestLoadFromEnvironmentWhenDotEnvDoesNotExist(t *testing.T) {
 	t.Setenv("APP_ENV", "environment")
 	t.Setenv("HTTP_PORT", "29091")
 	t.Setenv("DB_NAME", "environment_database")
+	t.Setenv("AUTH_ADMIN_TOKEN", "admin")
 
 	cfg, err := Load()
 	if err != nil {

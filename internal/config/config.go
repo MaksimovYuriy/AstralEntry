@@ -13,6 +13,7 @@ type Config struct {
 	App  AppConfig  `env-prefix:"APP_"`
 	HTTP HTTPConfig `env-prefix:"HTTP_"`
 	DB   DBConfig   `env-prefix:"DB_"`
+	Auth AuthConfig `env-prefix:"AUTH_"`
 }
 
 type HTTPConfig struct {
@@ -36,6 +37,11 @@ type DBConfig struct {
 
 type AppConfig struct {
 	Env string `env:"ENV" env-default:"prod"`
+}
+
+type AuthConfig struct {
+	AdminToken string        `env:"ADMIN_TOKEN" env-required:"true"`
+	TokenTTL   time.Duration `env:"TOKEN_TTL" env-default:"24h"`
 }
 
 func Load() (*Config, error) {

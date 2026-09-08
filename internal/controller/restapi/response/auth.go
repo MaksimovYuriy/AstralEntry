@@ -7,3 +7,5 @@ type Register struct {
 type Auth struct {
 	Token string `json:"token"`
 }
+
+type Logout map[string]bool

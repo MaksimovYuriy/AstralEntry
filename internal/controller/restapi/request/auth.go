@@ -1,12 +1,12 @@
 package request
 
 type Register struct {
-	AdminToken string
-	Login      string
-	Password   string
+	Token string
+	Login string
+	Pswd  string
 }
 
 type Auth struct {
-	Login    string
-	Password string
+	Login string
+	Pswd  string
 }

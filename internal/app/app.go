@@ -11,6 +11,11 @@ import (
 
 	"github.com/maksimovyuriy/astralentry/internal/config"
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi"
+	"github.com/maksimovyuriy/astralentry/internal/repo"
+	sessionrepo "github.com/maksimovyuriy/astralentry/internal/repo/session"
+	userrepo "github.com/maksimovyuriy/astralentry/internal/repo/user"
+	"github.com/maksimovyuriy/astralentry/internal/usecase"
+	authusecase "github.com/maksimovyuriy/astralentry/internal/usecase/auth"
 	"github.com/maksimovyuriy/astralentry/pkg/httpserver"
 	"github.com/maksimovyuriy/astralentry/pkg/logger"
 	"github.com/maksimovyuriy/astralentry/pkg/postgres"
@@ -39,7 +44,7 @@ func Run() error {
 	defer appDatabase.Close()
 
 	repositories := initRepositories(appDatabase)
-	useCases := initUseCases(repositories)
+	useCases := initUseCases(repositories, appCfg.Auth)
 	appServer := initServer(appCfg.HTTP, useCases, appLogger)
 	serverErrors := make(chan error, 1)
 
@@ -72,22 +77,36 @@ func Run() error {
 	return nil
 }
 
-type repositories struct{}
-
-type useCases struct{}
-
-func initRepositories(_ *sql.DB) repositories {
-	// TODO: initialize persistent repository implementations.
-	return repositories{}
+type repositories struct {
+	users    repo.UserRepo
+	sessions repo.SessionRepo
 }
 
-func initUseCases(_ repositories) useCases {
-	// TODO: initialize application use cases.
-	return useCases{}
+type useCases struct {
+	auth usecase.Auth
 }
 
-func initServer(cfg config.HTTPConfig, _ useCases, logger *slog.Logger) *httpserver.Server {
-	router := restapi.NewRouter(logger)
+func initRepositories(db *sql.DB) repositories {
+	return repositories{
+		users:    userrepo.New(db),
+		sessions: sessionrepo.New(db),
+	}
+}
+
+func initUseCases(repositories repositories, cfg config.AuthConfig) useCases {
+	return useCases{
+		auth: authusecase.New(
+			repositories.users,
+			repositories.sessions,
+			cfg.AdminToken,
+			cfg.TokenTTL,
+		),
+	}
+}
+
+func initServer(cfg config.HTTPConfig, useCases useCases, logger *slog.Logger) *httpserver.Server {
+	controller := restapi.NewController(useCases.auth, logger)
+	router := restapi.NewRouter(controller, logger)
 
 	return httpserver.New(
 		net.JoinHostPort(cfg.Address, cfg.Port),

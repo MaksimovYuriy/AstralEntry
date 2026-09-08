@@ -6,9 +6,13 @@ import (
 	"time"
 )
 
-func NewRouter(logger *slog.Logger) http.Handler {
+func NewRouter(controller *Controller, logger *slog.Logger) http.Handler {
 	router := http.NewServeMux()
 	apiRouter := http.NewServeMux()
+
+	apiRouter.HandleFunc("POST /register", controller.register)
+	apiRouter.HandleFunc("POST /auth", controller.authenticate)
+	apiRouter.HandleFunc("DELETE /auth/{token}", controller.logout)
 
 	router.HandleFunc("GET /healthz", health)
 	router.Handle("/api/", http.StripPrefix("/api", apiRouter))
@@ -33,10 +37,15 @@ func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 
+		route := r.Pattern
+		if route == "" {
+			route = r.URL.Path
+		}
+
 		logger.Info(
 			"HTTP request",
 			"method", r.Method,
-			"path", r.URL.Path,
+			"route", route,
 			"duration", time.Since(startedAt),
 		)
 	})
