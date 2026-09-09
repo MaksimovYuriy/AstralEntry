@@ -7,6 +7,8 @@ import (
 	"mime/multipart"
 	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 var ErrInvalidDocument = errors.New("invalid document")
@@ -36,6 +38,10 @@ type ListDocuments struct {
 	Value  string
 	Limit  string
 	Offset string
+}
+
+type GetDocument struct {
+	ID string
 }
 
 func (r *CreateDocument) Normalize() {
@@ -126,4 +132,12 @@ func parseOffset(value string) (int, error) {
 	}
 
 	return offset, nil
+}
+
+func (r GetDocument) Validate() error {
+	if _, err := uuid.Parse(r.ID); err != nil {
+		return fmt.Errorf("%w: id must be a valid UUID", ErrInvalidDocument)
+	}
+
+	return nil
 }

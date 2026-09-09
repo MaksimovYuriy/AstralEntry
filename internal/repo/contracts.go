@@ -34,5 +34,10 @@ type (
 			limit,
 			offset int,
 		) ([]entity.Document, error)
+		Get(ctx context.Context, requesterID, documentID string) (
+			entity.Document,
+			entity.DocumentContent,
+			error,
+		)
 	}
 )

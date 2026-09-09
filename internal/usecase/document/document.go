@@ -103,6 +103,33 @@ func (uc *UseCase) List(
 	return documents, nil
 }
 
+func (uc *UseCase) Get(
+	ctx context.Context,
+	requesterID string,
+	documentID string,
+) (entity.Document, entity.DocumentContent, io.ReadSeekCloser, error) {
+	document, content, err := uc.documents.Get(ctx, requesterID, documentID)
+	if errors.Is(err, repo.ErrNotFound) {
+		return entity.Document{}, entity.DocumentContent{}, nil, usecase.ErrDocumentNotFound
+	}
+	if errors.Is(err, repo.ErrForbidden) {
+		return entity.Document{}, entity.DocumentContent{}, nil, usecase.ErrForbidden
+	}
+	if err != nil {
+		return entity.Document{}, entity.DocumentContent{}, nil, err
+	}
+	if !document.File {
+		return document, content, nil, nil
+	}
+
+	file, err := uc.storage.Open(content.FilePath)
+	if err != nil {
+		return entity.Document{}, entity.DocumentContent{}, nil, err
+	}
+
+	return document, content, file, nil
+}
+
 func (uc *UseCase) resolveOwnerID(ctx context.Context, requesterID, login string) (string, error) {
 	if login == "" {
 		return requesterID, nil

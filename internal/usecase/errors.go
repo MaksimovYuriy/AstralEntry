@@ -12,5 +12,6 @@ var (
 	ErrForbidden          = errors.New("access forbidden")
 	ErrGrantUserNotFound  = errors.New("grant user not found")
 	ErrUserNotFound       = errors.New("user not found")
+	ErrDocumentNotFound   = errors.New("document not found")
 	ErrInvalidFilter      = errors.New("invalid document filter")
 )

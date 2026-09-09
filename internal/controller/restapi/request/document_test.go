@@ -59,3 +59,27 @@ func TestListDocumentsValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDocumentValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		request GetDocument
+		wantErr bool
+	}{
+		{
+			name:    "valid UUID",
+			request: GetDocument{ID: "550e8400-e29b-41d4-a716-446655440000"},
+		},
+		{name: "empty ID", request: GetDocument{}, wantErr: true},
+		{name: "invalid ID", request: GetDocument{ID: "document"}, wantErr: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.request.Validate()
+			if (err != nil) != test.wantErr {
+				t.Fatalf("Validate() error = %v, wantErr %v", err, test.wantErr)
+			}
+		})
+	}
+}

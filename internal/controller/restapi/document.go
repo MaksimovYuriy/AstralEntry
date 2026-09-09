@@ -3,6 +3,8 @@ package restapi
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"mime"
 	"net/http"
 	"strconv"
 
@@ -128,4 +130,60 @@ func (c *Controller) listDocuments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(body)
 	}
+}
+
+func (c *Controller) getDocument(w http.ResponseWriter, r *http.Request) {
+	input := request.GetDocument{ID: r.PathValue("id")}
+	if err := input.Validate(); err != nil {
+		c.writeError(w, r, invalidRequest("validate document id", err))
+		return
+	}
+
+	document, content, file, err := c.documents.Get(
+		r.Context(),
+		middleware.UserID(r.Context()),
+		input.ID,
+	)
+	if err != nil {
+		c.writeError(w, r, err)
+		return
+	}
+	if file != nil {
+		defer file.Close()
+	}
+
+	if err := writeDocumentContent(w, r, document, content, file); err != nil {
+		c.writeError(w, r, err)
+	}
+}
+
+func writeDocumentContent(
+	w http.ResponseWriter,
+	r *http.Request,
+	document entity.Document,
+	content entity.DocumentContent,
+	file io.ReadSeeker,
+) error {
+	if document.File {
+		w.Header().Set("Content-Type", document.Mime)
+		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+			"filename": document.Name,
+		}))
+		http.ServeContent(w, r, document.Name, document.Created, file)
+		return nil
+	}
+
+	body, err := json.Marshal(response.FormatData(content.JSON))
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		_, _ = w.Write(body)
+	}
+
+	return nil
 }

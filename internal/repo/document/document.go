@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -44,6 +45,32 @@ const listDocumentsQuery = `
 					AND du_access.user_id = $2
 			)
 		)
+`
+
+const getDocumentQuery = `
+	SELECT
+		d.id,
+		d.owner_id,
+		d.name,
+		d.mime,
+		d.file,
+		d.public,
+		d.created,
+		dc.json,
+		dc.file_path,
+		(
+			d.owner_id = $2
+			OR d.public = TRUE
+			OR EXISTS (
+				SELECT 1
+				FROM document_users du
+				WHERE du.document_id = d.id
+					AND du.user_id = $2
+			)
+		) AS allowed
+	FROM documents d
+	JOIN document_contents dc ON dc.document_id = d.id
+	WHERE d.id = $1
 `
 
 var _ repo.DocumentRepo = (*Repo)(nil)
@@ -133,6 +160,42 @@ func (r *Repo) List(
 	defer rows.Close()
 
 	return scanDocuments(rows)
+}
+
+func (r *Repo) Get(
+	ctx context.Context,
+	requesterID string,
+	documentID string,
+) (entity.Document, entity.DocumentContent, error) {
+	var document entity.Document
+	var content entity.DocumentContent
+	var filePath sql.NullString
+	var allowed bool
+	err := r.db.QueryRowContext(ctx, getDocumentQuery, documentID, requesterID).Scan(
+		&document.ID,
+		&document.OwnerID,
+		&document.Name,
+		&document.Mime,
+		&document.File,
+		&document.Public,
+		&document.Created,
+		&content.JSON,
+		&filePath,
+		&allowed,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.Document{}, entity.DocumentContent{}, repo.ErrNotFound
+	}
+	if err != nil {
+		return entity.Document{}, entity.DocumentContent{}, err
+	}
+	if !allowed {
+		return entity.Document{}, entity.DocumentContent{}, repo.ErrForbidden
+	}
+
+	content.DocumentID = document.ID
+	content.FilePath = filePath.String
+	return document, content, nil
 }
 
 func buildListQuery(

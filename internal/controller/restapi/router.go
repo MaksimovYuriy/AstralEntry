@@ -19,6 +19,8 @@ func NewRouter(controller *Controller, logger *slog.Logger) http.Handler {
 	apiRouter.Handle("POST /docs", authorize(http.HandlerFunc(controller.createDocument)))
 	apiRouter.Handle("GET /docs", authorize(http.HandlerFunc(controller.listDocuments)))
 	apiRouter.Handle("HEAD /docs", authorize(http.HandlerFunc(controller.listDocuments)))
+	apiRouter.Handle("GET /docs/{id}", authorize(http.HandlerFunc(controller.getDocument)))
+	apiRouter.Handle("HEAD /docs/{id}", authorize(http.HandlerFunc(controller.getDocument)))
 
 	router.HandleFunc("GET /healthz", health)
 	router.Handle("/api/", http.StripPrefix("/api", apiRouter))

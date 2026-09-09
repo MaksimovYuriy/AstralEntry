@@ -47,6 +47,7 @@ func errorResponse(err error) (int, string) {
 		errors.Is(err, usecase.ErrLoginAlreadyExists),
 		errors.Is(err, usecase.ErrGrantUserNotFound),
 		errors.Is(err, usecase.ErrUserNotFound),
+		errors.Is(err, usecase.ErrDocumentNotFound),
 		errors.Is(err, usecase.ErrInvalidFilter):
 		return http.StatusBadRequest, err.Error()
 
