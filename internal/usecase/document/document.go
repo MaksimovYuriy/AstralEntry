@@ -130,6 +130,38 @@ func (uc *UseCase) Get(
 	return document, content, file, nil
 }
 
+func (uc *UseCase) Delete(ctx context.Context, requesterID, documentID string) error {
+	document, content, err := uc.documents.Get(ctx, requesterID, documentID)
+	if errors.Is(err, repo.ErrNotFound) {
+		return usecase.ErrDocumentNotFound
+	}
+	if errors.Is(err, repo.ErrForbidden) {
+		return usecase.ErrForbidden
+	}
+	if err != nil {
+		return err
+	}
+	if document.OwnerID != requesterID {
+		return usecase.ErrForbidden
+	}
+
+	if err := uc.documents.Delete(ctx, requesterID, documentID); err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return usecase.ErrDocumentNotFound
+		}
+		return err
+	}
+
+	if content.FilePath == "" {
+		return nil
+	}
+	if err := uc.storage.Delete(content.FilePath); err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return fmt.Errorf("delete document file: %w", err)
+	}
+
+	return nil
+}
+
 func (uc *UseCase) resolveOwnerID(ctx context.Context, requesterID, login string) (string, error) {
 	if login == "" {
 		return requesterID, nil

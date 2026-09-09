@@ -83,3 +83,27 @@ func TestGetDocumentValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteDocumentValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		request DeleteDocument
+		wantErr bool
+	}{
+		{
+			name:    "valid UUID",
+			request: DeleteDocument{ID: "550e8400-e29b-41d4-a716-446655440000"},
+		},
+		{name: "empty ID", request: DeleteDocument{}, wantErr: true},
+		{name: "invalid ID", request: DeleteDocument{ID: "document"}, wantErr: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.request.Validate()
+			if (err != nil) != test.wantErr {
+				t.Fatalf("Validate() error = %v, wantErr %v", err, test.wantErr)
+			}
+		})
+	}
+}

@@ -28,6 +28,8 @@ type ListDocuments struct {
 	Docs []Document `json:"docs"`
 }
 
+type DeleteDocument map[string]bool
+
 func ListDocumentsFromEntities(documents []entity.Document) ListDocuments {
 	result := make([]Document, 0, len(documents))
 	for _, document := range documents {

@@ -38,5 +38,6 @@ type (
 			io.ReadSeekCloser,
 			error,
 		)
+		Delete(ctx context.Context, requesterID, documentID string) error
 	}
 )

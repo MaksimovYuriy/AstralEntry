@@ -157,6 +157,29 @@ func (c *Controller) getDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (c *Controller) deleteDocument(w http.ResponseWriter, r *http.Request) {
+	input := request.DeleteDocument{ID: r.PathValue("id")}
+	if err := input.Validate(); err != nil {
+		c.writeError(w, r, invalidRequest("validate document id", err))
+		return
+	}
+
+	if err := c.documents.Delete(
+		r.Context(),
+		middleware.UserID(r.Context()),
+		input.ID,
+	); err != nil {
+		c.writeError(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response.FormatResponse(
+		response.DeleteDocument{input.ID: true},
+	))
+}
+
 func writeDocumentContent(
 	w http.ResponseWriter,
 	r *http.Request,

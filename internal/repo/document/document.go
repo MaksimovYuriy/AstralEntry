@@ -73,6 +73,11 @@ const getDocumentQuery = `
 	WHERE d.id = $1
 `
 
+const deleteDocumentQuery = `
+	DELETE FROM documents
+	WHERE id = $1 AND owner_id = $2
+`
+
 var _ repo.DocumentRepo = (*Repo)(nil)
 
 func New(db *sql.DB) repo.DocumentRepo {
@@ -196,6 +201,23 @@ func (r *Repo) Get(
 	content.DocumentID = document.ID
 	content.FilePath = filePath.String
 	return document, content, nil
+}
+
+func (r *Repo) Delete(ctx context.Context, ownerID, documentID string) error {
+	result, err := r.db.ExecContext(ctx, deleteDocumentQuery, documentID, ownerID)
+	if err != nil {
+		return err
+	}
+
+	deleted, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if deleted == 0 {
+		return repo.ErrNotFound
+	}
+
+	return nil
 }
 
 func buildListQuery(

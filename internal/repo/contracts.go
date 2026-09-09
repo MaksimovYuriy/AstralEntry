@@ -39,5 +39,6 @@ type (
 			entity.DocumentContent,
 			error,
 		)
+		Delete(ctx context.Context, ownerID, documentID string) error
 	}
 )

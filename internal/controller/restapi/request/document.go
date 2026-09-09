@@ -44,6 +44,10 @@ type GetDocument struct {
 	ID string
 }
 
+type DeleteDocument struct {
+	ID string
+}
+
 func (r *CreateDocument) Normalize() {
 	r.Meta.Name = strings.TrimSpace(r.Meta.Name)
 	r.Meta.Mime = strings.TrimSpace(r.Meta.Mime)
@@ -135,7 +139,15 @@ func parseOffset(value string) (int, error) {
 }
 
 func (r GetDocument) Validate() error {
-	if _, err := uuid.Parse(r.ID); err != nil {
+	return validateDocumentID(r.ID)
+}
+
+func (r DeleteDocument) Validate() error {
+	return validateDocumentID(r.ID)
+}
+
+func validateDocumentID(id string) error {
+	if _, err := uuid.Parse(id); err != nil {
 		return fmt.Errorf("%w: id must be a valid UUID", ErrInvalidDocument)
 	}
 
