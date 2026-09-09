@@ -3,26 +3,31 @@ package document
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+	"io"
 	"time"
 
 	"github.com/maksimovyuriy/astralentry/internal/entity"
 	"github.com/maksimovyuriy/astralentry/internal/repo"
 	"github.com/maksimovyuriy/astralentry/internal/usecase"
+	"github.com/maksimovyuriy/astralentry/pkg/storage"
 )
 
 type UseCase struct {
 	documents repo.DocumentRepo
 	users     repo.UserRepo
+	storage   storage.Storage
 }
 
 var _ usecase.Document = (*UseCase)(nil)
 
-func New(documents repo.DocumentRepo, users repo.UserRepo) usecase.Document {
-	return &UseCase{documents: documents, users: users}
+func New(
+	documents repo.DocumentRepo,
+	users repo.UserRepo,
+	storage storage.Storage,
+) usecase.Document {
+	return &UseCase{documents: documents, users: users, storage: storage}
 }
 
 func (uc *UseCase) Create(
@@ -30,22 +35,8 @@ func (uc *UseCase) Create(
 	document entity.Document,
 	content entity.DocumentContent,
 	grant []string,
+	file io.Reader,
 ) (entity.Document, error) {
-	document.Name = strings.TrimSpace(document.Name)
-	document.Mime = strings.TrimSpace(document.Mime)
-	if document.OwnerID == "" || document.Name == "" || document.Mime == "" {
-		return entity.Document{}, usecase.ErrInvalidDocument
-	}
-	if len(content.JSON) == 0 && content.FilePath == "" {
-		return entity.Document{}, usecase.ErrInvalidDocument
-	}
-	if document.File != (content.FilePath != "") {
-		return entity.Document{}, usecase.ErrInvalidDocument
-	}
-	if len(content.JSON) != 0 && !json.Valid(content.JSON) {
-		return entity.Document{}, usecase.ErrInvalidDocument
-	}
-
 	documentID, err := generateUUID()
 	if err != nil {
 		return entity.Document{}, err
@@ -55,17 +46,7 @@ func (uc *UseCase) Create(
 	content.DocumentID = documentID
 
 	documentUsers := make([]entity.DocumentUser, 0, len(grant))
-	seen := make(map[string]struct{}, len(grant))
 	for _, login := range grant {
-		login = strings.TrimSpace(login)
-		if login == "" {
-			return entity.Document{}, usecase.ErrGrantUserNotFound
-		}
-		if _, exists := seen[login]; exists {
-			continue
-		}
-		seen[login] = struct{}{}
-
 		user, err := uc.users.FindByLogin(ctx, login)
 		if err != nil {
 			if errors.Is(err, repo.ErrNotFound) {
@@ -83,11 +64,30 @@ func (uc *UseCase) Create(
 		})
 	}
 
+	if file != nil {
+		content.FilePath = documentID
+		if err := uc.storage.Save(content.FilePath, file); err != nil {
+			return entity.Document{}, err
+		}
+	}
+
 	if err := uc.documents.Create(ctx, document, content, documentUsers); err != nil {
-		return entity.Document{}, err
+		return entity.Document{}, uc.cleanupFile(content.FilePath, err)
 	}
 
 	return document, nil
+}
+
+func (uc *UseCase) cleanupFile(filePath string, cause error) error {
+	if filePath == "" {
+		return cause
+	}
+
+	if err := uc.storage.Delete(filePath); err != nil {
+		return errors.Join(cause, fmt.Errorf("delete file after database error: %w", err))
+	}
+
+	return cause
 }
 
 func generateUUID() (string, error) {

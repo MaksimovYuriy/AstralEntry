@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/request"
+	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/response"
+	"github.com/maksimovyuriy/astralentry/internal/entity"
 )
 
 const multipartMemoryLimit = 8 << 20
@@ -22,6 +24,7 @@ func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 		c.writeError(w, errInvalidRequest)
 		return
 	}
+	input.Normalize()
 
 	ownerID, err := c.auth.Authorize(r.Context(), input.Meta.Token)
 	if err != nil {
@@ -31,10 +34,6 @@ func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 
 	if value := r.FormValue("json"); value != "" {
 		input.JSON = json.RawMessage(value)
-		if !json.Valid(input.JSON) {
-			c.writeError(w, errInvalidRequest)
-			return
-		}
 	}
 
 	file, fileHeader, err := r.FormFile("file")
@@ -46,9 +45,35 @@ func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 		input.File = fileHeader
 	}
+	if err := input.Validate(); err != nil {
+		c.writeError(w, errInvalidRequest)
+		return
+	}
 
-	_ = ownerID
-	_ = input
-	_ = file
-	c.writeError(w, errNotImplemented)
+	_, err = c.documents.Create(
+		r.Context(),
+		entity.Document{
+			OwnerID: ownerID,
+			Name:    input.Meta.Name,
+			Mime:    input.Meta.Mime,
+			File:    input.Meta.File,
+			Public:  input.Meta.Public,
+		},
+		entity.DocumentContent{JSON: input.JSON},
+		input.Meta.Grant,
+		file,
+	)
+	if err != nil {
+		c.writeError(w, err)
+		return
+	}
+
+	result := response.CreateDocument{JSON: input.JSON}
+	if input.File != nil {
+		result.File = input.Meta.Name
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response.FormatData(result))
 }

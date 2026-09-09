@@ -7,16 +7,19 @@ import (
 )
 
 type Controller struct {
-	auth   usecase.Auth
-	logger *slog.Logger
+	auth      usecase.Auth
+	documents usecase.Document
+	logger    *slog.Logger
 }
 
 func NewController(
 	auth usecase.Auth,
+	documents usecase.Document,
 	logger *slog.Logger,
 ) *Controller {
 	return &Controller{
-		auth:   auth,
-		logger: logger,
+		auth:      auth,
+		documents: documents,
+		logger:    logger,
 	}
 }

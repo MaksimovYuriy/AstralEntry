@@ -9,10 +9,7 @@ import (
 	"github.com/maksimovyuriy/astralentry/internal/usecase"
 )
 
-var (
-	errInvalidRequest = errors.New("invalid request")
-	errNotImplemented = errors.New("method not implemented")
-)
+var errInvalidRequest = errors.New("invalid request")
 
 func (c *Controller) writeError(w http.ResponseWriter, err error) {
 	status, text := errorResponse(err)
@@ -33,7 +30,6 @@ func errorResponse(err error) (int, string) {
 		errors.Is(err, usecase.ErrInvalidLogin),
 		errors.Is(err, usecase.ErrInvalidPassword),
 		errors.Is(err, usecase.ErrLoginAlreadyExists),
-		errors.Is(err, usecase.ErrInvalidDocument),
 		errors.Is(err, usecase.ErrGrantUserNotFound):
 		return http.StatusBadRequest, err.Error()
 
@@ -44,9 +40,6 @@ func errorResponse(err error) (int, string) {
 
 	case errors.Is(err, usecase.ErrForbidden):
 		return http.StatusForbidden, err.Error()
-
-	case errors.Is(err, errNotImplemented):
-		return http.StatusNotImplemented, err.Error()
 
 	default:
 		return http.StatusInternalServerError, "internal server error"

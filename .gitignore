@@ -2,4 +2,4 @@
 *.local
 bin/
 coverage.out
-
+/storage/

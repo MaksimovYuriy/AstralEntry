@@ -12,13 +12,16 @@ import (
 	"github.com/maksimovyuriy/astralentry/internal/config"
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi"
 	"github.com/maksimovyuriy/astralentry/internal/repo"
+	documentrepo "github.com/maksimovyuriy/astralentry/internal/repo/document"
 	sessionrepo "github.com/maksimovyuriy/astralentry/internal/repo/session"
 	userrepo "github.com/maksimovyuriy/astralentry/internal/repo/user"
 	"github.com/maksimovyuriy/astralentry/internal/usecase"
 	authusecase "github.com/maksimovyuriy/astralentry/internal/usecase/auth"
+	documentusecase "github.com/maksimovyuriy/astralentry/internal/usecase/document"
 	"github.com/maksimovyuriy/astralentry/pkg/httpserver"
 	"github.com/maksimovyuriy/astralentry/pkg/logger"
 	"github.com/maksimovyuriy/astralentry/pkg/postgres"
+	"github.com/maksimovyuriy/astralentry/pkg/storage"
 )
 
 func Run() error {
@@ -44,8 +47,14 @@ func Run() error {
 	defer appDatabase.Close()
 	appLogger.Info("Database connected")
 
+	fileStorage, err := storage.NewLocal(appCfg.Storage.Path)
+	if err != nil {
+		return err
+	}
+	appLogger.Info("File storage initialized")
+
 	repositories := initRepositories(appDatabase)
-	useCases := initUseCases(repositories, appCfg.Auth)
+	useCases := initUseCases(repositories, fileStorage, appCfg.Auth)
 	appServer := initServer(appCfg.HTTP, useCases, appLogger)
 	serverErrors := make(chan error, 1)
 	appLogger.Info("Server started")
@@ -80,22 +89,25 @@ func Run() error {
 }
 
 type repositories struct {
-	users    repo.UserRepo
-	sessions repo.SessionRepo
+	users     repo.UserRepo
+	sessions  repo.SessionRepo
+	documents repo.DocumentRepo
 }
 
 type useCases struct {
-	auth usecase.Auth
+	auth      usecase.Auth
+	documents usecase.Document
 }
 
 func initRepositories(db *sql.DB) repositories {
 	return repositories{
-		users:    userrepo.New(db),
-		sessions: sessionrepo.New(db),
+		users:     userrepo.New(db),
+		sessions:  sessionrepo.New(db),
+		documents: documentrepo.New(db),
 	}
 }
 
-func initUseCases(repositories repositories, cfg config.AuthConfig) useCases {
+func initUseCases(repositories repositories, fileStorage storage.Storage, cfg config.AuthConfig) useCases {
 	return useCases{
 		auth: authusecase.New(
 			repositories.users,
@@ -103,11 +115,16 @@ func initUseCases(repositories repositories, cfg config.AuthConfig) useCases {
 			cfg.AdminToken,
 			cfg.TokenTTL,
 		),
+		documents: documentusecase.New(
+			repositories.documents,
+			repositories.users,
+			fileStorage,
+		),
 	}
 }
 
 func initServer(cfg config.HTTPConfig, useCases useCases, logger *slog.Logger) *httpserver.Server {
-	controller := restapi.NewController(useCases.auth, logger)
+	controller := restapi.NewController(useCases.auth, useCases.documents, logger)
 	router := restapi.NewRouter(controller, logger)
 
 	return httpserver.New(

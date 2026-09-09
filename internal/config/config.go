@@ -10,10 +10,11 @@ import (
 )
 
 type Config struct {
-	App  AppConfig  `env-prefix:"APP_"`
-	HTTP HTTPConfig `env-prefix:"HTTP_"`
-	DB   DBConfig   `env-prefix:"DB_"`
-	Auth AuthConfig `env-prefix:"AUTH_"`
+	App     AppConfig     `env-prefix:"APP_"`
+	HTTP    HTTPConfig    `env-prefix:"HTTP_"`
+	DB      DBConfig      `env-prefix:"DB_"`
+	Auth    AuthConfig    `env-prefix:"AUTH_"`
+	Storage StorageConfig `env-prefix:"STORAGE_"`
 }
 
 type HTTPConfig struct {
@@ -42,6 +43,10 @@ type AppConfig struct {
 type AuthConfig struct {
 	AdminToken string        `env:"ADMIN_TOKEN" env-required:"true"`
 	TokenTTL   time.Duration `env:"TOKEN_TTL" env-default:"24h"`
+}
+
+type StorageConfig struct {
+	Path string `env:"PATH" env-default:"./storage/documents"`
 }
 
 func Load() (*Config, error) {

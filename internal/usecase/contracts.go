@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"io"
 
 	"github.com/maksimovyuriy/astralentry/internal/entity"
 )
@@ -20,6 +21,7 @@ type (
 			document entity.Document,
 			content entity.DocumentContent,
 			grant []string,
+			file io.Reader,
 		) (entity.Document, error)
 	}
 )

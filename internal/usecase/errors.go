@@ -10,6 +10,5 @@ var (
 	ErrInvalidCredentials = errors.New("invalid login or password")
 	ErrInvalidSession     = errors.New("invalid or expired session")
 	ErrForbidden          = errors.New("access forbidden")
-	ErrInvalidDocument    = errors.New("invalid document")
 	ErrGrantUserNotFound  = errors.New("grant user not found")
 )

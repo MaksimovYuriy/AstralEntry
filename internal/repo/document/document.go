@@ -67,6 +67,7 @@ func (r *Repo) Create(
 	const userQuery = `
 		INSERT INTO document_users (document_id, user_id)
 		VALUES ($1, $2)
+		ON CONFLICT (document_id, user_id) DO NOTHING
 	`
 	for _, user := range users {
 		if _, err := tx.ExecContext(ctx, userQuery, document.ID, user.UserID); err != nil {
