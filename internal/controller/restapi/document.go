@@ -14,21 +14,21 @@ const multipartMemoryLimit = 8 << 20
 
 func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(multipartMemoryLimit); err != nil {
-		c.writeError(w, errInvalidRequest)
+		c.writeError(w, r, invalidRequest("parse multipart form", err))
 		return
 	}
 	defer r.MultipartForm.RemoveAll()
 
 	var input request.CreateDocument
 	if err := json.Unmarshal([]byte(r.FormValue("meta")), &input.Meta); err != nil {
-		c.writeError(w, errInvalidRequest)
+		c.writeError(w, r, invalidRequest("decode meta", err))
 		return
 	}
 	input.Normalize()
 
 	ownerID, err := c.auth.Authorize(r.Context(), input.Meta.Token)
 	if err != nil {
-		c.writeError(w, err)
+		c.writeError(w, r, err)
 		return
 	}
 
@@ -38,7 +38,7 @@ func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil && !errors.Is(err, http.ErrMissingFile) {
-		c.writeError(w, errInvalidRequest)
+		c.writeError(w, r, invalidRequest("read file", err))
 		return
 	}
 	if err == nil {
@@ -46,7 +46,7 @@ func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 		input.File = fileHeader
 	}
 	if err := input.Validate(); err != nil {
-		c.writeError(w, errInvalidRequest)
+		c.writeError(w, r, invalidRequest("validate document", err))
 		return
 	}
 
@@ -64,7 +64,7 @@ func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 		file,
 	)
 	if err != nil {
-		c.writeError(w, err)
+		c.writeError(w, r, err)
 		return
 	}
 

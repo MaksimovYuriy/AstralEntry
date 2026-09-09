@@ -13,7 +13,7 @@ const maxFormBodySize = 1 << 20
 func (c *Controller) register(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxFormBodySize)
 	if err := r.ParseForm(); err != nil {
-		c.writeError(w, errInvalidRequest)
+		c.writeError(w, r, invalidRequest("parse registration form", err))
 		return
 	}
 
@@ -30,7 +30,7 @@ func (c *Controller) register(w http.ResponseWriter, r *http.Request) {
 		input.Pswd,
 	)
 	if err != nil {
-		c.writeError(w, err)
+		c.writeError(w, r, err)
 		return
 	}
 
@@ -44,7 +44,7 @@ func (c *Controller) register(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) authenticate(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxFormBodySize)
 	if err := r.ParseForm(); err != nil {
-		c.writeError(w, errInvalidRequest)
+		c.writeError(w, r, invalidRequest("parse authentication form", err))
 		return
 	}
 
@@ -55,7 +55,7 @@ func (c *Controller) authenticate(w http.ResponseWriter, r *http.Request) {
 
 	token, err := c.auth.Authenticate(r.Context(), input.Login, input.Pswd)
 	if err != nil {
-		c.writeError(w, err)
+		c.writeError(w, r, err)
 		return
 	}
 
@@ -69,12 +69,12 @@ func (c *Controller) authenticate(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) logout(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {
-		c.writeError(w, errInvalidRequest)
+		c.writeError(w, r, errInvalidRequest)
 		return
 	}
 
 	if err := c.auth.Logout(r.Context(), token); err != nil {
-		c.writeError(w, err)
+		c.writeError(w, r, err)
 		return
 	}
 

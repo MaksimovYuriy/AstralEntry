@@ -3,6 +3,7 @@ package request
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"strings"
 )
@@ -43,21 +44,24 @@ func (r *CreateDocument) Normalize() {
 }
 
 func (r CreateDocument) Validate() error {
-	if r.Meta.Name == "" || r.Meta.Mime == "" {
-		return ErrInvalidDocument
+	if r.Meta.Name == "" {
+		return fmt.Errorf("%w: name is required", ErrInvalidDocument)
+	}
+	if r.Meta.Mime == "" {
+		return fmt.Errorf("%w: mime is required", ErrInvalidDocument)
 	}
 	if len(r.JSON) == 0 && r.File == nil {
-		return ErrInvalidDocument
+		return fmt.Errorf("%w: json or file is required", ErrInvalidDocument)
 	}
 	if r.Meta.File != (r.File != nil) {
-		return ErrInvalidDocument
+		return fmt.Errorf("%w: file flag does not match multipart file", ErrInvalidDocument)
 	}
 	if len(r.JSON) != 0 && !json.Valid(r.JSON) {
-		return ErrInvalidDocument
+		return fmt.Errorf("%w: json is malformed", ErrInvalidDocument)
 	}
 	for _, login := range r.Meta.Grant {
 		if login == "" {
-			return ErrInvalidDocument
+			return fmt.Errorf("%w: grant contains an empty login", ErrInvalidDocument)
 		}
 	}
 

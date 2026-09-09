@@ -3,6 +3,7 @@ package restapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/response"
@@ -11,10 +12,22 @@ import (
 
 var errInvalidRequest = errors.New("invalid request")
 
-func (c *Controller) writeError(w http.ResponseWriter, err error) {
+func invalidRequest(operation string, cause error) error {
+	return fmt.Errorf("%w: %s: %v", errInvalidRequest, operation, cause)
+}
+
+func (c *Controller) writeError(w http.ResponseWriter, r *http.Request, err error) {
 	status, text := errorResponse(err)
-	if status == http.StatusInternalServerError {
-		c.logger.Error("Handle HTTP request", "error", err)
+	logArguments := []any{
+		"method", r.Method,
+		"route", r.Pattern,
+		"status", status,
+		"error", err,
+	}
+	if status >= http.StatusInternalServerError {
+		c.logger.Error("HTTP request failed", logArguments...)
+	} else {
+		c.logger.Warn("HTTP request rejected", logArguments...)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -26,8 +39,10 @@ func (c *Controller) writeError(w http.ResponseWriter, err error) {
 
 func errorResponse(err error) (int, string) {
 	switch {
-	case errors.Is(err, errInvalidRequest),
-		errors.Is(err, usecase.ErrInvalidLogin),
+	case errors.Is(err, errInvalidRequest):
+		return http.StatusBadRequest, errInvalidRequest.Error()
+
+	case errors.Is(err, usecase.ErrInvalidLogin),
 		errors.Is(err, usecase.ErrInvalidPassword),
 		errors.Is(err, usecase.ErrLoginAlreadyExists),
 		errors.Is(err, usecase.ErrGrantUserNotFound):
