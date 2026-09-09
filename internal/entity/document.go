@@ -10,4 +10,5 @@ type Document struct {
 	File    bool
 	Public  bool
 	Created time.Time
+	Grant   []string
 }

@@ -11,4 +11,6 @@ var (
 	ErrInvalidSession     = errors.New("invalid or expired session")
 	ErrForbidden          = errors.New("access forbidden")
 	ErrGrantUserNotFound  = errors.New("grant user not found")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidFilter      = errors.New("invalid document filter")
 )

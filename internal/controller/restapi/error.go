@@ -45,7 +45,9 @@ func errorResponse(err error) (int, string) {
 	case errors.Is(err, usecase.ErrInvalidLogin),
 		errors.Is(err, usecase.ErrInvalidPassword),
 		errors.Is(err, usecase.ErrLoginAlreadyExists),
-		errors.Is(err, usecase.ErrGrantUserNotFound):
+		errors.Is(err, usecase.ErrGrantUserNotFound),
+		errors.Is(err, usecase.ErrUserNotFound),
+		errors.Is(err, usecase.ErrInvalidFilter):
 		return http.StatusBadRequest, err.Error()
 
 	case errors.Is(err, usecase.ErrInvalidAdminToken),

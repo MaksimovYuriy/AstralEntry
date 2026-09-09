@@ -5,10 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"strconv"
 	"strings"
 )
 
 var ErrInvalidDocument = errors.New("invalid document")
+
+const (
+	defaultDocumentsLimit = 20
+	maxDocumentsLimit     = 100
+)
 
 type CreateDocument struct {
 	Meta CreateDocumentMeta
@@ -23,6 +29,15 @@ type CreateDocumentMeta struct {
 	Token  string   `json:"token"`
 	Mime   string   `json:"mime"`
 	Grant  []string `json:"grant"`
+}
+
+type ListDocuments struct {
+	Token  string
+	Login  string
+	Key    string
+	Value  string
+	Limit  string
+	Offset string
 }
 
 func (r *CreateDocument) Normalize() {
@@ -66,4 +81,51 @@ func (r CreateDocument) Validate() error {
 	}
 
 	return nil
+}
+
+func (r *ListDocuments) Normalize() {
+	r.Login = strings.TrimSpace(r.Login)
+	r.Key = strings.TrimSpace(r.Key)
+	r.Value = strings.TrimSpace(r.Value)
+	r.Limit = strings.TrimSpace(r.Limit)
+	r.Offset = strings.TrimSpace(r.Offset)
+}
+
+func (r ListDocuments) Validate() error {
+	if (r.Key == "") != (r.Value == "") {
+		return fmt.Errorf("%w: key and value must be provided together", ErrInvalidDocument)
+	}
+
+	return nil
+}
+
+func (r ListDocuments) ParsePagination() (int, int, error) {
+	limit := defaultDocumentsLimit
+	if r.Limit != "" {
+		parsed, err := strconv.Atoi(r.Limit)
+		if err != nil || parsed < 1 || parsed > maxDocumentsLimit {
+			return 0, 0, fmt.Errorf("%w: limit must be between 1 and %d", ErrInvalidDocument, maxDocumentsLimit)
+		}
+		limit = parsed
+	}
+
+	offset, err := parseOffset(r.Offset)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return limit, offset, nil
+}
+
+func parseOffset(value string) (int, error) {
+	if value == "" {
+		return 0, nil
+	}
+
+	offset, err := strconv.Atoi(value)
+	if err != nil || offset < 0 {
+		return 0, fmt.Errorf("%w: offset must be a non-negative integer", ErrInvalidDocument)
+	}
+
+	return offset, nil
 }

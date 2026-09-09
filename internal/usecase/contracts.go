@@ -23,5 +23,14 @@ type (
 			grant []string,
 			file io.Reader,
 		) (entity.Document, error)
+		List(
+			ctx context.Context,
+			requesterID,
+			login,
+			key,
+			value string,
+			limit,
+			offset int,
+		) ([]entity.Document, error)
 	}
 )

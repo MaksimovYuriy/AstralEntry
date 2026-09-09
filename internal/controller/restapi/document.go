@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/request"
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/response"
@@ -76,4 +77,63 @@ func (c *Controller) createDocument(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(response.FormatData(result))
+}
+
+func (c *Controller) listDocuments(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	input := request.ListDocuments{
+		Token:  query.Get("token"),
+		Login:  query.Get("login"),
+		Key:    query.Get("key"),
+		Value:  query.Get("value"),
+		Limit:  query.Get("limit"),
+		Offset: query.Get("offset"),
+	}
+	input.Normalize()
+
+	if err := input.Validate(); err != nil {
+		c.writeError(w, r, invalidRequest("validate document list", err))
+		return
+	}
+
+	limit, offset, err := input.ParsePagination()
+	if err != nil {
+		c.writeError(w, r, invalidRequest("validate document list", err))
+		return
+	}
+
+	requesterID, err := c.auth.Authorize(r.Context(), input.Token)
+	if err != nil {
+		c.writeError(w, r, err)
+		return
+	}
+
+	documents, err := c.documents.List(
+		r.Context(),
+		requesterID,
+		input.Login,
+		input.Key,
+		input.Value,
+		limit,
+		offset,
+	)
+	if err != nil {
+		c.writeError(w, r, err)
+		return
+	}
+
+	body, err := json.Marshal(response.FormatData(
+		response.ListDocumentsFromEntities(documents),
+	))
+	if err != nil {
+		c.writeError(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		_, _ = w.Write(body)
+	}
 }

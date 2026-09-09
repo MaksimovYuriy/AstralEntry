@@ -25,5 +25,14 @@ type (
 			content entity.DocumentContent,
 			users []entity.DocumentUser,
 		) error
+		List(
+			ctx context.Context,
+			requesterID,
+			ownerID,
+			key,
+			value string,
+			limit,
+			offset int,
+		) ([]entity.Document, error)
 	}
 )

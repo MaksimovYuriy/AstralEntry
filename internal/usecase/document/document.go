@@ -78,6 +78,47 @@ func (uc *UseCase) Create(
 	return document, nil
 }
 
+func (uc *UseCase) List(
+	ctx context.Context,
+	requesterID string,
+	login string,
+	key string,
+	value string,
+	limit int,
+	offset int,
+) ([]entity.Document, error) {
+	ownerID, err := uc.resolveOwnerID(ctx, requesterID, login)
+	if err != nil {
+		return nil, err
+	}
+
+	documents, err := uc.documents.List(ctx, requesterID, ownerID, key, value, limit, offset)
+	if errors.Is(err, repo.ErrInvalidFilter) {
+		return nil, usecase.ErrInvalidFilter
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return documents, nil
+}
+
+func (uc *UseCase) resolveOwnerID(ctx context.Context, requesterID, login string) (string, error) {
+	if login == "" {
+		return requesterID, nil
+	}
+
+	user, err := uc.users.FindByLogin(ctx, login)
+	if errors.Is(err, repo.ErrNotFound) {
+		return "", usecase.ErrUserNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return user.ID, nil
+}
+
 func (uc *UseCase) cleanupFile(filePath string, cause error) error {
 	if filePath == "" {
 		return cause
