@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/middleware"
 )
 
 func NewRouter(controller *Controller, logger *slog.Logger) http.Handler {
@@ -12,10 +14,11 @@ func NewRouter(controller *Controller, logger *slog.Logger) http.Handler {
 
 	apiRouter.HandleFunc("POST /register", controller.register)
 	apiRouter.HandleFunc("POST /auth", controller.authenticate)
-	apiRouter.HandleFunc("DELETE /auth/{token}", controller.logout)
-	apiRouter.HandleFunc("POST /docs", controller.createDocument)
-	apiRouter.HandleFunc("GET /docs", controller.listDocuments)
-	apiRouter.HandleFunc("HEAD /docs", controller.listDocuments)
+	authorize := middleware.Authorize(controller.auth, controller.writeError)
+	apiRouter.Handle("DELETE /auth", authorize(http.HandlerFunc(controller.logout)))
+	apiRouter.Handle("POST /docs", authorize(http.HandlerFunc(controller.createDocument)))
+	apiRouter.Handle("GET /docs", authorize(http.HandlerFunc(controller.listDocuments)))
+	apiRouter.Handle("HEAD /docs", authorize(http.HandlerFunc(controller.listDocuments)))
 
 	router.HandleFunc("GET /healthz", health)
 	router.Handle("/api/", http.StripPrefix("/api", apiRouter))

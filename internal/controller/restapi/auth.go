@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/middleware"
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/request"
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi/response"
 )
@@ -67,11 +68,7 @@ func (c *Controller) authenticate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) logout(w http.ResponseWriter, r *http.Request) {
-	token := r.PathValue("token")
-	if token == "" {
-		c.writeError(w, r, errInvalidRequest)
-		return
-	}
+	token := middleware.Token(r.Context())
 
 	if err := c.auth.Logout(r.Context(), token); err != nil {
 		c.writeError(w, r, err)
