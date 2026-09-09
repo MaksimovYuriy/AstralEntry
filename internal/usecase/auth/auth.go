@@ -52,7 +52,7 @@ func (uc *UseCase) Register(
 	password string,
 ) (entity.User, error) {
 	if !tokensEqual(adminToken, uc.adminToken) {
-		return entity.User{}, errors.New("invalid admin token")
+		return entity.User{}, usecase.ErrInvalidAdminToken
 	}
 	if err := validateLogin(login); err != nil {
 		return entity.User{}, err
@@ -79,6 +79,9 @@ func (uc *UseCase) Register(
 	}
 
 	if err := uc.users.Create(ctx, user); err != nil {
+		if errors.Is(err, repo.ErrAlreadyExists) {
+			return entity.User{}, usecase.ErrLoginAlreadyExists
+		}
 		return entity.User{}, err
 	}
 
@@ -92,10 +95,16 @@ func (uc *UseCase) Authenticate(
 ) (string, error) {
 	user, err := uc.users.FindByLogin(ctx, login)
 	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return "", usecase.ErrInvalidCredentials
+		}
 		return "", err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return "", usecase.ErrInvalidCredentials
+		}
 		return "", err
 	}
 
@@ -122,6 +131,9 @@ func (uc *UseCase) Authenticate(
 func (uc *UseCase) Authorize(ctx context.Context, token string) (string, error) {
 	session, err := uc.sessions.FindByTokenHash(ctx, tokenHash(token))
 	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return "", usecase.ErrInvalidSession
+		}
 		return "", err
 	}
 
@@ -129,12 +141,17 @@ func (uc *UseCase) Authorize(ctx context.Context, token string) (string, error) 
 }
 
 func (uc *UseCase) Logout(ctx context.Context, token string) error {
-	return uc.sessions.DeleteByTokenHash(ctx, tokenHash(token))
+	err := uc.sessions.DeleteByTokenHash(ctx, tokenHash(token))
+	if errors.Is(err, repo.ErrNotFound) {
+		return usecase.ErrInvalidSession
+	}
+
+	return err
 }
 
 func validateLogin(login string) error {
 	if !loginPattern.MatchString(login) {
-		return errors.New("login must contain at least 8 latin letters or digits")
+		return usecase.ErrInvalidLogin
 	}
 
 	return nil
@@ -142,7 +159,7 @@ func validateLogin(login string) error {
 
 func validatePassword(password string) error {
 	if len([]rune(password)) < 8 {
-		return errors.New("password must contain at least 8 characters")
+		return usecase.ErrInvalidPassword
 	}
 
 	var hasLower, hasUpper, hasDigit, hasSymbol bool
@@ -160,7 +177,7 @@ func validatePassword(password string) error {
 	}
 
 	if !hasLower || !hasUpper || !hasDigit || !hasSymbol {
-		return errors.New("password must contain lower-case, upper-case, digit and symbol characters")
+		return usecase.ErrInvalidPassword
 	}
 
 	return nil

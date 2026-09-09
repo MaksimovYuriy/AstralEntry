@@ -42,11 +42,13 @@ func Run() error {
 		return err
 	}
 	defer appDatabase.Close()
+	appLogger.Info("Database connected")
 
 	repositories := initRepositories(appDatabase)
 	useCases := initUseCases(repositories, appCfg.Auth)
 	appServer := initServer(appCfg.HTTP, useCases, appLogger)
 	serverErrors := make(chan error, 1)
+	appLogger.Info("Server started")
 
 	go func() {
 		serverErrors <- appServer.Run()

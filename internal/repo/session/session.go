@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/maksimovyuriy/astralentry/internal/entity"
 	"github.com/maksimovyuriy/astralentry/internal/repo"
@@ -49,12 +50,28 @@ func (r *Repo) FindByTokenHash(ctx context.Context, tokenHash []byte) (entity.Se
 		&session.CreatedAt,
 		&session.ExpiresAt,
 	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return entity.Session{}, repo.ErrNotFound
+	}
+
 	return session, err
 }
 
 func (r *Repo) DeleteByTokenHash(ctx context.Context, tokenHash []byte) error {
 	const query = `DELETE FROM sessions WHERE token_hash = $1`
 
-	_, err := r.db.ExecContext(ctx, query, tokenHash)
-	return err
+	result, err := r.db.ExecContext(ctx, query, tokenHash)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return repo.ErrNotFound
+	}
+
+	return nil
 }

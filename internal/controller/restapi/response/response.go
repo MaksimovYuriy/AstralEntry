@@ -1,4 +1,4 @@
-package formatter
+package response
 
 type Body struct {
 	Error    *ErrorData `json:"error,omitempty"`
