@@ -17,4 +17,13 @@ type (
 		FindByTokenHash(ctx context.Context, tokenHash []byte) (entity.Session, error)
 		DeleteByTokenHash(ctx context.Context, tokenHash []byte) error
 	}
+
+	DocumentRepo interface {
+		Create(
+			ctx context.Context,
+			document entity.Document,
+			content entity.DocumentContent,
+			users []entity.DocumentUser,
+		) error
+	}
 )

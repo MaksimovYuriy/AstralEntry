@@ -13,6 +13,7 @@ func NewRouter(controller *Controller, logger *slog.Logger) http.Handler {
 	apiRouter.HandleFunc("POST /register", controller.register)
 	apiRouter.HandleFunc("POST /auth", controller.authenticate)
 	apiRouter.HandleFunc("DELETE /auth/{token}", controller.logout)
+	apiRouter.HandleFunc("POST /docs", controller.createDocument)
 
 	router.HandleFunc("GET /healthz", health)
 	router.Handle("/api/", http.StripPrefix("/api", apiRouter))

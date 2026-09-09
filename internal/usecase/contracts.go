@@ -13,4 +13,13 @@ type (
 		Authorize(ctx context.Context, token string) (string, error)
 		Logout(ctx context.Context, token string) error
 	}
+
+	Document interface {
+		Create(
+			ctx context.Context,
+			document entity.Document,
+			content entity.DocumentContent,
+			grant []string,
+		) (entity.Document, error)
+	}
 )
