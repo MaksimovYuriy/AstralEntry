@@ -10,7 +10,10 @@ import (
 	"github.com/maksimovyuriy/astralentry/internal/usecase"
 )
 
-var errInvalidRequest = errors.New("invalid request")
+var (
+	errInvalidRequest   = errors.New("invalid request")
+	errMethodNotAllowed = errors.New("method not allowed")
+)
 
 func invalidRequest(operation string, cause error) error {
 	return fmt.Errorf("%w: %s: %v", errInvalidRequest, operation, cause)
@@ -41,6 +44,8 @@ func errorResponse(err error) (int, string) {
 	switch {
 	case errors.Is(err, errInvalidRequest):
 		return http.StatusBadRequest, errInvalidRequest.Error()
+	case errors.Is(err, errMethodNotAllowed):
+		return http.StatusMethodNotAllowed, errMethodNotAllowed.Error()
 
 	case errors.Is(err, usecase.ErrInvalidLogin),
 		errors.Is(err, usecase.ErrInvalidPassword),
@@ -58,6 +63,8 @@ func errorResponse(err error) (int, string) {
 
 	case errors.Is(err, usecase.ErrForbidden):
 		return http.StatusForbidden, err.Error()
+	case errors.Is(err, usecase.ErrNotImplemented):
+		return http.StatusNotImplemented, err.Error()
 
 	default:
 		return http.StatusInternalServerError, "internal server error"

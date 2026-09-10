@@ -14,4 +14,5 @@ var (
 	ErrUserNotFound       = errors.New("user not found")
 	ErrDocumentNotFound   = errors.New("document not found")
 	ErrInvalidFilter      = errors.New("invalid document filter")
+	ErrNotImplemented     = errors.New("method not implemented")
 )

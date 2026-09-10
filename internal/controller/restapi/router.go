@@ -22,11 +22,19 @@ func NewRouter(controller *Controller, logger *slog.Logger) http.Handler {
 	apiRouter.Handle("GET /docs/{id}", authorize(http.HandlerFunc(controller.getDocument)))
 	apiRouter.Handle("HEAD /docs/{id}", authorize(http.HandlerFunc(controller.getDocument)))
 	apiRouter.Handle("DELETE /docs/{id}", authorize(http.HandlerFunc(controller.deleteDocument)))
+	apiRouter.HandleFunc("/register", controller.methodNotAllowed)
+	apiRouter.HandleFunc("/auth", controller.methodNotAllowed)
+	apiRouter.HandleFunc("/docs", controller.methodNotAllowed)
+	apiRouter.HandleFunc("/docs/{id}", controller.methodNotAllowed)
 
 	router.HandleFunc("GET /healthz", health)
 	router.Handle("/api/", http.StripPrefix("/api", apiRouter))
 
 	return requestLogger(logger, router)
+}
+
+func (c *Controller) methodNotAllowed(w http.ResponseWriter, r *http.Request) {
+	c.writeError(w, r, errMethodNotAllowed)
 }
 
 func health(w http.ResponseWriter, r *http.Request) {
