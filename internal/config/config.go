@@ -15,6 +15,7 @@ type Config struct {
 	DB      DBConfig      `env-prefix:"DB_"`
 	Auth    AuthConfig    `env-prefix:"AUTH_"`
 	Storage StorageConfig `env-prefix:"STORAGE_"`
+	Redis   RedisConfig   `env-prefix:"REDIS_"`
 }
 
 type HTTPConfig struct {
@@ -47,6 +48,14 @@ type AuthConfig struct {
 
 type StorageConfig struct {
 	Path string `env:"PATH" env-default:"./storage/documents"`
+}
+
+type RedisConfig struct {
+	Address     string        `env:"ADDRESS" env-default:"localhost:6379"`
+	Password    string        `env:"PASSWORD"`
+	DB          int           `env:"DB" env-default:"0"`
+	TTL         time.Duration `env:"TTL" env-default:"5m"`
+	MaxFileSize int64         `env:"MAX_FILE_SIZE" env-default:"8388608"`
 }
 
 func Load() (*Config, error) {

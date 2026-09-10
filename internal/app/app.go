@@ -8,7 +8,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/maksimovyuriy/astralentry/internal/cache"
+	redisCache "github.com/maksimovyuriy/astralentry/internal/cache/redis"
 	"github.com/maksimovyuriy/astralentry/internal/config"
 	"github.com/maksimovyuriy/astralentry/internal/controller/restapi"
 	"github.com/maksimovyuriy/astralentry/internal/repo"
@@ -21,6 +24,7 @@ import (
 	"github.com/maksimovyuriy/astralentry/pkg/httpserver"
 	"github.com/maksimovyuriy/astralentry/pkg/logger"
 	"github.com/maksimovyuriy/astralentry/pkg/postgres"
+	redisClient "github.com/maksimovyuriy/astralentry/pkg/redis"
 	"github.com/maksimovyuriy/astralentry/pkg/storage"
 )
 
@@ -53,8 +57,19 @@ func Run() error {
 	}
 	appLogger.Info("File storage initialized")
 
+	redisConnection := redisClient.New(appCfg.Redis)
+	defer redisConnection.Close()
+	redisCtx, redisCancel := context.WithTimeout(appCtx, 2*time.Second)
+	if err := redisConnection.Ping(redisCtx).Err(); err != nil {
+		appLogger.Warn("Redis cache unavailable", "error", err)
+	} else {
+		appLogger.Info("Redis cache connected")
+	}
+	redisCancel()
+	documentCache := redisCache.NewDocument(redisConnection, appCfg.Redis.TTL)
+
 	repositories := initRepositories(appDatabase)
-	useCases := initUseCases(repositories, fileStorage, appCfg.Auth)
+	useCases := initUseCases(repositories, fileStorage, documentCache, appCfg, appLogger)
 	appServer := initServer(appCfg.HTTP, useCases, appLogger)
 	serverErrors := make(chan error, 1)
 	appLogger.Info("Server started")
@@ -107,18 +122,31 @@ func initRepositories(db *sql.DB) repositories {
 	}
 }
 
-func initUseCases(repositories repositories, fileStorage storage.Storage, cfg config.AuthConfig) useCases {
+func initUseCases(
+	repositories repositories,
+	fileStorage storage.Storage,
+	documentCache cache.Document,
+	cfg *config.Config,
+	logger *slog.Logger,
+) useCases {
+	documents := documentusecase.New(
+		repositories.documents,
+		repositories.users,
+		fileStorage,
+	)
+
 	return useCases{
 		auth: authusecase.New(
 			repositories.users,
 			repositories.sessions,
-			cfg.AdminToken,
-			cfg.TokenTTL,
+			cfg.Auth.AdminToken,
+			cfg.Auth.TokenTTL,
 		),
-		documents: documentusecase.New(
-			repositories.documents,
-			repositories.users,
-			fileStorage,
+		documents: documentusecase.NewCached(
+			documents,
+			documentCache,
+			logger,
+			cfg.Redis.MaxFileSize,
 		),
 	}
 }
