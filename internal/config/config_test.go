@@ -17,7 +17,7 @@ func TestLoadFromDotEnv(t *testing.T) {
 	t.Setenv("HTTP_PORT", "39091")
 	t.Setenv("DB_NAME", "before_dotenv_database")
 
-	dotEnv := []byte("APP_ENV=dotenv\nHTTP_PORT=19091\nDB_NAME=dotenv_database\nAUTH_ADMIN_TOKEN=admin\n")
+	dotEnv := []byte("APP_ENV=dotenv\nHTTP_PORT=8081\nDB_NAME=dotenv_database\nAUTH_ADMIN_TOKEN=admin\n")
 	if err := os.WriteFile(".env", dotEnv, 0o600); err != nil {
 		t.Fatalf("write .env: %v", err)
 	}
@@ -30,8 +30,8 @@ func TestLoadFromDotEnv(t *testing.T) {
 	if cfg.App.Env != "dotenv" {
 		t.Errorf("App.Env = %q, want %q", cfg.App.Env, "dotenv")
 	}
-	if cfg.HTTP.Port != "19091" {
-		t.Errorf("HTTP.Port = %q, want %q", cfg.HTTP.Port, "19091")
+	if cfg.HTTP.Port != "8081" {
+		t.Errorf("HTTP.Port = %q, want %q", cfg.HTTP.Port, "8081")
 	}
 	if cfg.DB.Name != "dotenv_database" {
 		t.Errorf("DB.Name = %q, want %q", cfg.DB.Name, "dotenv_database")
