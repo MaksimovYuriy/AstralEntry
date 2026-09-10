@@ -19,6 +19,8 @@ import (
 
 const redisTestDB = 15
 
+const defaultRedisTestAddress = "127.0.0.1:6379"
+
 type e2eAuth struct{}
 
 func (e2eAuth) Register(context.Context, string, string, string) (entity.User, error) {
@@ -84,14 +86,14 @@ func (s *e2eDocuments) Delete(context.Context, string, string) error {
 func TestRedisCacheEndToEnd(t *testing.T) {
 	address := os.Getenv("REDIS_TEST_ADDRESS")
 	if address == "" {
-		t.Skip("set REDIS_TEST_ADDRESS to run Redis end-to-end test")
+		address = defaultRedisTestAddress
 	}
 
 	ctx := context.Background()
 	client := redislib.NewClient(&redislib.Options{Addr: address, DB: redisTestDB})
 	t.Cleanup(func() { _ = client.Close() })
 	if err := client.Ping(ctx).Err(); err != nil {
-		t.Fatalf("connect to test Redis: %v", err)
+		t.Skipf("test Redis is unavailable at %s: %v", address, err)
 	}
 
 	documentCache := rediscache.NewDocument(client, 5*time.Minute)
